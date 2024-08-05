@@ -32,7 +32,7 @@ public class StockPriceService {
         // Initialize the sharedPrices map with a Mono for each ticker
         for (String ticker : tickers) {
             sharedPrices.put(ticker, Mono.defer(() -> Mono.just(getMockPrice()))
-                    .cache(Duration.ofSeconds(2)));
+                    .cache(Duration.ofSeconds(1)));
         }
     }
 
@@ -52,9 +52,9 @@ public class StockPriceService {
      * @return a Flux emitting StockPrice objects at regular intervals.
      */
     public Flux<StockPrice> getPriceStream() {
-        // Returns a Flux that emits StockPrice objects at regular intervals of 2 seconds.
+        // Returns a Flux that emits StockPrice objects at regular intervals of 1 seconds.
         // Logs a message if the request is cancelled.
-        return Flux.interval(Duration.ofSeconds(2))
+        return Flux.interval(Duration.ofSeconds(1))
                 // For each interval, it iterates over the list of tickers and maps each ticker to a StockPrice object
                 .flatMap(sequence -> Flux.fromIterable(tickers)
                 // using the sharedPrice Mono to get the current price.
@@ -65,11 +65,11 @@ public class StockPriceService {
     }
 
     /**
-     * Generates a mock stock price between 90 and 100.
+     * Generates a mock stock price between 80 and 100.
      *
      * @return a random stock price as an Integer.
      */
     private int getMockPrice() {
-        return 90 + (int) (Math.random() * 11);
+        return 80 + (int) (Math.random() * 21);
     }
 }
