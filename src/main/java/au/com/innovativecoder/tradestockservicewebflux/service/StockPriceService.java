@@ -9,7 +9,9 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service class for handling stock price operations.
@@ -23,13 +25,25 @@ public class StockPriceService {
     // List of example stock tickers
     List<String> tickers = List.of("APPLE", "GOOGLE", "AMAZON", "BABATATA");
 
+    // Map to store shared Monos for each ticker
+    private final Map<String, Mono<Integer>> sharedPrices = new HashMap<>();
+
+    public StockPriceService() {
+        // Initialize the sharedPrices map with a Mono for each ticker
+        for (String ticker : tickers) {
+            sharedPrices.put(ticker, Mono.defer(() -> Mono.just(getMockPrice()))
+                    .cache(Duration.ofSeconds(2)));
+        }
+    }
+
     /**
-     * Retrieves the current price of a stock.
+     * Retrieves the current price of a stock for a specific ticker.
      *
+     * @param ticker the stock ticker
      * @return a Mono emitting the current stock price as an Integer.
      */
-    public Mono<Integer> getCurrentPrice() {
-        return Mono.just(getMockPrice());
+    public Mono<Integer> getCurrentPrice(String ticker) {
+        return sharedPrices.get(ticker);
     }
 
     /**
@@ -38,18 +52,20 @@ public class StockPriceService {
      * @return a Flux emitting StockPrice objects at regular intervals.
      */
     public Flux<StockPrice> getPriceStream() {
-        // Creates a Flux that emits long values starting from 0 at 2-second intervals
+        // Returns a Flux that emits StockPrice objects at regular intervals of 2 seconds.
+        // Logs a message if the request is cancelled.
         return Flux.interval(Duration.ofSeconds(2))
-            // For each emitted value, map the list of tickers to a Flux of StockPrice objects
-            .flatMap(sequence -> Flux.fromIterable(tickers)
-                // Create a new StockPrice object for each ticker with a mock price and the current timestamp
-                .map(ticker -> new StockPrice(ticker, getMockPrice(), LocalDateTime.now().toString())))
-            // Log a message when the request is cancelled
+                // For each interval, it iterates over the list of tickers and maps each ticker to a StockPrice object
+                .flatMap(sequence -> Flux.fromIterable(tickers)
+                // using the sharedPrice Mono to get the current price.
+                .flatMap(ticker -> sharedPrices.get(ticker).map(
+                        price -> new StockPrice(ticker, price, LocalDateTime.now().toString())
+                )))
             .doOnCancel(() -> log.info("request cancelled for /stock/price-stream"));
     }
 
     /**
-     * Generates a mock stock price between 100 and 130.
+     * Generates a mock stock price between 90 and 100.
      *
      * @return a random stock price as an Integer.
      */

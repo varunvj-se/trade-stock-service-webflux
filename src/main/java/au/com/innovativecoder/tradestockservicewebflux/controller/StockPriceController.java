@@ -23,8 +23,7 @@ public class StockPriceController {
 
     @GetMapping("/{ticker}")
     public Mono<TickerPrice> getCurrentPrice(@PathVariable String ticker) {
-        return stockPriceService.getCurrentPrice()
-                .map(price -> new TickerPrice(ticker, price));
+        return stockPriceService.getCurrentPrice(ticker).map(price -> new TickerPrice(ticker, price));
     }
 
 
